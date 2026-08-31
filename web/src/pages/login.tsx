@@ -31,11 +31,13 @@ export function LoginPage() {
   const { data: authMethods } = useAuthMethods(search.returnTo)
 
   const returnTo = search.returnTo && search.returnTo.startsWith('/') ? search.returnTo : '/dashboard'
+  const localPasswordEnabled = authMethods?.some((method) => method.id === 'local-password') === true
   const disabledMessage = search.reason === 'accountDisabled' ? t('apiError.auth.accountDisabled') : null
   const directMethod = directAuthConfig.provider
     ? authMethods?.find((method) =>
       method.methodType === 'DIRECT_PASSWORD' && method.provider === directAuthConfig.provider)
     : undefined
+  const passwordEnabled = localPasswordEnabled || directMethod !== undefined
   const bootstrapMethod = authMethods?.find((method) => method.methodType === 'SESSION_BOOTSTRAP')
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -88,13 +90,16 @@ export function LoginPage() {
               onAuthenticated={() => navigate({ to: returnTo })}
             />
 
-            <Tabs defaultValue="password" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="password">{t('login.tabPassword')}</TabsTrigger>
+            <Tabs defaultValue={passwordEnabled ? 'password' : 'oauth'} className="space-y-6">
+              <TabsList className={`grid w-full ${passwordEnabled ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                {passwordEnabled ? (
+                  <TabsTrigger value="password">{t('login.tabPassword')}</TabsTrigger>
+                ) : null}
                 <TabsTrigger value="oauth">{t('login.tabOAuth')}</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="password">
+              {passwordEnabled ? (
+                <TabsContent value="password">
                 <form className="space-y-4" onSubmit={handleSubmit}>
                   {directAuthConfig.enabled ? (
                     <p className="text-sm text-muted-foreground">
@@ -160,24 +165,29 @@ export function LoginPage() {
                   <Button className="w-full" disabled={loginMutation.isPending} type="submit">
                     {loginMutation.isPending ? t('login.submitting') : t('login.submit')}
                   </Button>
-                  <p className="text-center text-sm">
-                    <Link to="/reset-password" className="font-medium text-primary hover:underline">
-                      {t('login.forgotPassword')}
-                    </Link>
-                  </p>
-                  <p className="text-center text-sm text-muted-foreground">
-                    {t('login.noAccount')}
-                    {' '}
-                    <Link
-                      to="/register"
-                      search={{ returnTo }}
-                      className="font-medium text-primary hover:underline"
-                    >
-                      {t('login.register')}
-                    </Link>
-                  </p>
+                  {localPasswordEnabled ? (
+                    <>
+                      <p className="text-center text-sm">
+                        <Link to="/reset-password" className="font-medium text-primary hover:underline">
+                          {t('login.forgotPassword')}
+                        </Link>
+                      </p>
+                      <p className="text-center text-sm text-muted-foreground">
+                        {t('login.noAccount')}
+                        {' '}
+                        <Link
+                          to="/register"
+                          search={{ returnTo }}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {t('login.register')}
+                        </Link>
+                      </p>
+                    </>
+                  ) : null}
                 </form>
-              </TabsContent>
+                </TabsContent>
+              ) : null}
 
               <TabsContent value="oauth" className="space-y-4">
                 <p className="text-sm text-muted-foreground">

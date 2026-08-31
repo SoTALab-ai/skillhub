@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import com.iflytek.skillhub.auth.bootstrap.PassiveSessionAuthenticator;
 import com.iflytek.skillhub.auth.direct.DirectAuthProvider;
 import com.iflytek.skillhub.auth.direct.DirectAuthRequest;
+import com.iflytek.skillhub.auth.local.LocalAuthProperties;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.config.AuthSessionBootstrapProperties;
 import com.iflytek.skillhub.config.DirectAuthProperties;
@@ -15,6 +16,25 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.security.oauth2.client.OAuth2ClientProperties;
 
 class AuthMethodCatalogTest {
+
+    @Test
+    void listMethodsShouldHideLocalPasswordWhenLocalAuthIsDisabled() {
+        OAuth2ClientProperties oauthProperties = new OAuth2ClientProperties();
+        oauthProperties.getRegistration().put("feishu", registration("client-id", "Feishu"));
+
+        AuthMethodCatalog catalog = new AuthMethodCatalog(
+            oauthProperties,
+            new LocalAuthProperties(),
+            new DirectAuthProperties(),
+            new AuthSessionBootstrapProperties(),
+            List.of(),
+            List.of()
+        );
+
+        assertThat(catalog.listMethods(null))
+            .extracting(method -> method.id())
+            .containsExactly("oauth-feishu");
+    }
 
     @Test
     void catalogsShouldHideEmptyAndPlaceholderOAuthProviders() {
@@ -27,6 +47,7 @@ class AuthMethodCatalogTest {
 
         AuthMethodCatalog catalog = new AuthMethodCatalog(
             oauthProperties,
+            enabledLocalAuth(),
             new DirectAuthProperties(),
             new AuthSessionBootstrapProperties(),
             List.of(),
@@ -85,6 +106,7 @@ class AuthMethodCatalogTest {
 
         AuthMethodCatalog catalog = new AuthMethodCatalog(
             oauthProperties,
+            enabledLocalAuth(),
             directAuthProperties,
             bootstrapProperties,
             List.of(directProvider),
@@ -134,6 +156,7 @@ class AuthMethodCatalogTest {
 
         AuthMethodCatalog catalog = new AuthMethodCatalog(
             oauthProperties,
+            enabledLocalAuth(),
             directAuthProperties,
             bootstrapProperties,
             List.of(directProvider),
@@ -153,5 +176,11 @@ class AuthMethodCatalogTest {
         registration.setClientId(clientId);
         registration.setClientName(clientName);
         return registration;
+    }
+
+    private static LocalAuthProperties enabledLocalAuth() {
+        LocalAuthProperties properties = new LocalAuthProperties();
+        properties.setEnabled(true);
+        return properties;
     }
 }

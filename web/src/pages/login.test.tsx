@@ -35,7 +35,9 @@ vi.mock('@/features/auth/session-bootstrap-entry', () => ({
 }))
 
 vi.mock('@/features/auth/use-auth-methods', () => ({
-  useAuthMethods: () => ({ data: [] }),
+  useAuthMethods: () => ({
+    data: [{ id: 'local-password', methodType: 'PASSWORD', provider: 'local' }],
+  }),
 }))
 
 vi.mock('@/features/auth/use-password-login', () => ({

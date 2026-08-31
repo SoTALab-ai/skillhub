@@ -28,6 +28,12 @@ vi.mock('@/features/auth/use-local-auth', () => ({
   }),
 }))
 
+vi.mock('@/features/auth/use-auth-methods', () => ({
+  useAuthMethods: () => ({
+    data: [{ id: 'local-password', methodType: 'PASSWORD', provider: 'local' }],
+  }),
+}))
+
 vi.mock('@/shared/ui/button', () => ({
   Button: ({ children }: { children: unknown }) => children,
 }))

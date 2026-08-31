@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ApiError } from '@/api/client'
 import { LoginButton } from '@/features/auth/login-button'
+import { useAuthMethods } from '@/features/auth/use-auth-methods'
 import { useLocalRegister } from '@/features/auth/use-local-auth'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -62,6 +63,8 @@ export function RegisterPage() {
   const [formError, setFormError] = useState<string | null>(null)
 
   const returnTo = search.returnTo && search.returnTo.startsWith('/') ? search.returnTo : '/dashboard'
+  const { data: authMethods } = useAuthMethods(returnTo)
+  const localRegistrationEnabled = authMethods?.some((method) => method.id === 'local-password') === true
 
   function validateUsername(value: string) {
     const trimmed = value.trim()
@@ -174,13 +177,16 @@ export function RegisterPage() {
           <CardDescription>{t('register.subtitle')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="local" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="local">{t('register.tabLocal')}</TabsTrigger>
+          <Tabs defaultValue={localRegistrationEnabled ? 'local' : 'oauth'} className="space-y-6">
+            <TabsList className={`grid w-full ${localRegistrationEnabled ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              {localRegistrationEnabled ? (
+                <TabsTrigger value="local">{t('register.tabLocal')}</TabsTrigger>
+              ) : null}
               <TabsTrigger value="oauth">{t('register.tabOAuth')}</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="local">
+            {localRegistrationEnabled ? (
+              <TabsContent value="local">
               <form className="space-y-4" onSubmit={handleSubmit}>
                 <div className="space-y-2">
                   <label className="text-sm font-medium" htmlFor="register-username">{t('register.username')}</label>
@@ -267,7 +273,8 @@ export function RegisterPage() {
                   </Link>
                 </p>
               </form>
-            </TabsContent>
+              </TabsContent>
+            ) : null}
 
             <TabsContent value="oauth" className="space-y-4">
               <p className="text-sm text-muted-foreground">
