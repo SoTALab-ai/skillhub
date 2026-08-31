@@ -295,6 +295,11 @@ spec:
                 configMapKeyRef:
                   name: {{ include "skillhub.fullname" . }}-config
                   key: auth-direct-enabled
+            - name: SKILLHUB_ACCESS_GLOBAL_ANONYMOUS_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: access-global-anonymous-enabled
             - name: SKILLHUB_BUILTIN_SKILLS_ENABLED
               valueFrom:
                 configMapKeyRef:

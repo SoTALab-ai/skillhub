@@ -133,6 +133,10 @@ public class PostgresFullTextQueryService implements SearchQueryService {
             sql.append("OR d.namespace_id IN :memberNamespaceIds ");
         }
         sql.append(") ");
+        if (query.visibilityScope().userId() == null
+                && !query.visibilityScope().anonymousGlobalAccessEnabled()) {
+            sql.append("AND n.type <> 'GLOBAL' ");
+        }
 
         // Namespace filtering
         if (query.namespaceId() != null) {

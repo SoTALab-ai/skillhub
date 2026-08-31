@@ -4,9 +4,11 @@ import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.*;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +30,9 @@ public class SkillTagService {
     private final SkillTagRepository skillTagRepository;
     private final VisibilityChecker visibilityChecker;
     private final SkillSlugResolutionService skillSlugResolutionService;
+
+    @Value("${skillhub.access.global.anonymous-enabled:true}")
+    private boolean anonymousGlobalAccessEnabled = true;
 
     public SkillTagService(
             NamespaceRepository namespaceRepository,
@@ -51,6 +56,11 @@ public class SkillTagService {
                                    String currentUserId,
                                    java.util.Map<Long, NamespaceRole> userNamespaceRoles) {
         Namespace namespace = findNamespace(namespaceSlug);
+        if (!anonymousGlobalAccessEnabled
+                && currentUserId == null
+                && namespace.getType() == NamespaceType.GLOBAL) {
+            throw new DomainForbiddenException("error.skill.access.denied", skillSlug);
+        }
         Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
         if (!visibilityChecker.canAccess(skill, currentUserId, userNamespaceRoles)) {
             throw new DomainForbiddenException("error.skill.access.denied", skillSlug);

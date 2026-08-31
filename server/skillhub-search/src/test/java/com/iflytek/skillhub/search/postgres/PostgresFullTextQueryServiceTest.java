@@ -401,6 +401,36 @@ class PostgresFullTextQueryServiceTest {
     }
 
     @Test
+    void anonymousSearchSqlShouldExcludeGlobalNamespaceWhenConfigured() {
+        EntityManager entityManager = mock(EntityManager.class);
+        Query nativeQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
+        when(entityManager.createNativeQuery(anyString()))
+                .thenReturn(nativeQuery)
+                .thenReturn(countQuery);
+        when(nativeQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(nativeQuery);
+        when(countQuery.setParameter(anyString(), org.mockito.ArgumentMatchers.any())).thenReturn(countQuery);
+        when(nativeQuery.getResultList()).thenReturn(List.of());
+        when(countQuery.getSingleResult()).thenReturn(0L);
+
+        PostgresFullTextQueryService service = new PostgresFullTextQueryService(entityManager);
+
+        service.search(new SearchQuery(
+                null,
+                null,
+                new SearchVisibilityScope(null, Set.of(), Set.of(), false, false),
+                "newest",
+                0,
+                20
+        ));
+
+        ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+        verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sqlCaptor.capture());
+        assertThat(sqlCaptor.getAllValues().getFirst()).contains("AND n.type <> 'GLOBAL'");
+        assertThat(sqlCaptor.getAllValues().get(1)).contains("AND n.type <> 'GLOBAL'");
+    }
+
+    @Test
     void installableLatestFilterShouldApplyToSearchAndCountQueries() {
         EntityManager entityManager = mock(EntityManager.class);
         Query nativeQuery = mock(Query.class);

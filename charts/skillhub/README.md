@@ -188,6 +188,14 @@ helm -n skillhub upgrade -i skillhub ./charts/skillhub \
 | `web.service.port` | Web 端口 | `80` |
 | `scanner.service.port` | Scanner 端口 | `8000` |
 
+### 访问控制
+
+| 参数 | 描述 | 默认值 |
+|------|------|--------|
+| `access.global.anonymousEnabled` | 是否允许匿名用户发现、查看和下载 `global` namespace 中的 skills | `true` |
+
+设置为 `false` 后，匿名搜索会排除 `global`，匿名详情、标签、文件与下载请求会被拒绝；登录用户保持可见。
+
 ### 私有镜像仓库
 
 使用私有仓库时，需要分别覆盖 SkillHub 镜像、依赖等待镜像和 Bitnami 子 Chart

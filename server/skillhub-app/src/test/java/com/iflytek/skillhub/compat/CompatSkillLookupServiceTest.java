@@ -112,6 +112,21 @@ class CompatSkillLookupServiceTest {
         assertThat(result.skill().getId()).isEqualTo(7L);
     }
 
+    @Test
+    void resolveVisible_hidesGlobalSkillFromAnonymousCallerWhenConfigured() {
+        Namespace namespace = namespace(1L, "global", NamespaceType.GLOBAL);
+        Skill publicSkill = skill(7L, 1L, "demo", SkillVisibility.PUBLIC, 70L);
+        ReflectionTestUtils.setField(service, "anonymousGlobalAccessEnabled", false);
+
+        when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(namespace));
+        when(namespaceRepository.findById(1L)).thenReturn(Optional.of(namespace));
+        when(skillSlugResolutionService.resolve(1L, "demo", null, SkillSlugResolutionService.Preference.PUBLISHED))
+                .thenReturn(publicSkill);
+
+        assertThatThrownBy(() -> service.resolveVisible("global", "demo", null, Map.of()))
+                .isInstanceOf(DomainNotFoundException.class);
+    }
+
     private static Skill skill(Long id, Long namespaceId, String slug, SkillVisibility visibility, Long latestVersionId) {
         Skill skill = new Skill(namespaceId, slug, "owner-1", visibility);
         ReflectionTestUtils.setField(skill, "id", id);

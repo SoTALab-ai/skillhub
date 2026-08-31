@@ -10,6 +10,7 @@ import com.iflytek.skillhub.domain.label.SkillLabelService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.Skill;
@@ -24,6 +25,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -43,6 +45,9 @@ public class SkillLabelAppService {
     private final LabelSearchSyncService labelSearchSyncService;
     private final SkillSlugResolutionService skillSlugResolutionService;
     private final RequestIdAccessor requestIdAccessor;
+
+    @Value("${skillhub.access.global.anonymous-enabled:true}")
+    private boolean anonymousGlobalAccessEnabled = true;
 
     public SkillLabelAppService(NamespaceRepository namespaceRepository,
                                 SkillRepository skillRepository,
@@ -163,7 +168,19 @@ public class SkillLabelAppService {
                                       String userId,
                                       Map<Long, NamespaceRole> userNsRoles,
                                       Set<String> platformRoles) {
-        Skill skill = resolveSkill(namespaceSlug, skillSlug, userId);
+        Namespace namespace = namespaceRepository.findBySlug(namespaceSlug)
+                .orElseThrow(() -> new DomainBadRequestException("error.namespace.slug.notFound", namespaceSlug));
+        if (!anonymousGlobalAccessEnabled
+                && userId == null
+                && namespace.getType() == NamespaceType.GLOBAL) {
+            throw new DomainForbiddenException("error.skill.access.denied", skillSlug);
+        }
+        Skill skill = skillSlugResolutionService.resolve(
+                namespace.getId(),
+                skillSlug,
+                userId,
+                SkillSlugResolutionService.Preference.CURRENT_USER
+        );
         if (platformRoles.contains("SUPER_ADMIN")) {
             return skill;
         }

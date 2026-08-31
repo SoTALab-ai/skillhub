@@ -25,6 +25,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
 import java.util.List;
@@ -32,6 +33,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -90,6 +92,18 @@ class SkillSearchAppServiceTest {
         assertEquals(0, response.items().size());
         assertEquals(0, response.total());
         verify(skillRepository, times(0)).findByIdIn(anyList());
+    }
+
+    @Test
+    void search_shouldPassGlobalRestrictionToAnonymousSearchScope() {
+        ReflectionTestUtils.setField(service, "anonymousGlobalAccessEnabled", false);
+        when(searchQueryService.search(any())).thenReturn(new SearchResult(List.of(), 0, 0, 20));
+
+        service.search(null, null, "newest", 0, 20, null, null);
+
+        ArgumentCaptor<SearchQuery> queryCaptor = ArgumentCaptor.forClass(SearchQuery.class);
+        verify(searchQueryService).search(queryCaptor.capture());
+        assertFalse(queryCaptor.getValue().visibilityScope().anonymousGlobalAccessEnabled());
     }
 
     @Test

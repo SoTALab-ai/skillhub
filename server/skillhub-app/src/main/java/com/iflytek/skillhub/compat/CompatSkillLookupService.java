@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /**
@@ -36,6 +37,9 @@ public class CompatSkillLookupService {
     private final SkillVersionRepository skillVersionRepository;
     private final SkillSlugResolutionService skillSlugResolutionService;
     private final VisibilityChecker visibilityChecker;
+
+    @Value("${skillhub.access.global.anonymous-enabled:true}")
+    private boolean anonymousGlobalAccessEnabled = true;
 
     public CompatSkillLookupService(SkillRepository skillRepository,
                                     NamespaceRepository namespaceRepository,
@@ -77,6 +81,12 @@ public class CompatSkillLookupService {
     public boolean canAccess(Skill skill, String currentUserId, Map<Long, NamespaceRole> userNsRoles) {
         if (skill == null) {
             return false;
+        }
+        if (!anonymousGlobalAccessEnabled && currentUserId == null) {
+            Optional<Namespace> namespace = namespaceRepository.findById(skill.getNamespaceId());
+            if (namespace.isPresent() && namespace.get().getType() == NamespaceType.GLOBAL) {
+                return false;
+            }
         }
         Map<Long, NamespaceRole> roles = userNsRoles != null ? userNsRoles : Map.of();
         return visibilityChecker.canAccess(skill, currentUserId, roles);

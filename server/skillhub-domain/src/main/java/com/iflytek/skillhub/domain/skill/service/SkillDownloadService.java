@@ -5,6 +5,7 @@ import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
+import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.*;
@@ -13,6 +14,7 @@ import com.iflytek.skillhub.storage.ObjectMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
@@ -46,6 +48,9 @@ public class SkillDownloadService {
     private final VisibilityChecker visibilityChecker;
     private final ApplicationEventPublisher eventPublisher;
     private final SkillSlugResolutionService skillSlugResolutionService;
+
+    @Value("${skillhub.access.global.anonymous-enabled:true}")
+    private boolean anonymousGlobalAccessEnabled = true;
 
     public SkillDownloadService(
             NamespaceRepository namespaceRepository,
@@ -279,6 +284,11 @@ public class SkillDownloadService {
                                    Skill skill,
                                    String currentUserId,
                                    Map<Long, NamespaceRole> userNsRoles) {
+        if (!anonymousGlobalAccessEnabled
+                && currentUserId == null
+                && namespace.getType() == NamespaceType.GLOBAL) {
+            throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
+        }
         if (currentUserId == null && !isAnonymousDownloadAllowed(skill)) {
             throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
         }

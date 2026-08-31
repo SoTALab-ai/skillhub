@@ -54,6 +54,7 @@ data:
   device-auth-verification-uri: {{ $deviceAuthVerificationUri | quote }}
   auth-direct-enabled: {{ .Values.auth.direct.enabled | quote }}
   auth-direct-provider: {{ .Values.auth.direct.provider | quote }}
+  access-global-anonymous-enabled: {{ .Values.access.global.anonymousEnabled | quote }}
 
   # Sub-path deployment (empty keeps a fixed-base image's baked base; set e.g. /portal/)
   web-base-path: {{ .Values.web.basePath | default "" | quote }}

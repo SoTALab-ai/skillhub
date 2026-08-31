@@ -4,6 +4,7 @@ import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
+import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
 import com.iflytek.skillhub.domain.review.ReviewTask;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
@@ -121,6 +122,19 @@ class SkillQueryServiceTest {
         assertNotNull(result.headlineVersion());
         assertEquals("1.0.0", result.headlineVersion().version());
         assertFalse(result.canReport());
+    }
+
+    @Test
+    void testGetSkillDetail_RejectsAnonymousGlobalAccessWhenDisabled() throws Exception {
+        Namespace namespace = new Namespace("global", "Global", "system");
+        namespace.setType(NamespaceType.GLOBAL);
+        setId(namespace, 1L);
+        setField(service, "anonymousGlobalAccessEnabled", false);
+        when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(namespace));
+
+        assertThrows(DomainForbiddenException.class, () ->
+                service.getSkillDetail("global", "demo", null, Map.of()));
+        verify(skillRepository, never()).findByNamespaceIdAndSlug(anyLong(), anyString());
     }
 
     @Test
@@ -1416,8 +1430,12 @@ class SkillQueryServiceTest {
     }
 
     private void setId(Object entity, Long id) throws Exception {
-        Field idField = entity.getClass().getDeclaredField("id");
-        idField.setAccessible(true);
-        idField.set(entity, id);
+        setField(entity, "id", id);
+    }
+
+    private void setField(Object target, String fieldName, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(target, value);
     }
 }
