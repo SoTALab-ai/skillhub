@@ -31,7 +31,8 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
-    "skillhub.auth.direct.enabled=true"
+    "skillhub.auth.direct.enabled=true",
+    "skillhub.auth.local.enabled=true"
 })
 class DirectAuthControllerTest {
 

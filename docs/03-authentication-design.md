@@ -158,6 +158,30 @@ OIDC 登录沿用同一条业务链路，但由 Spring Security 的 `oidcUserSer
 subject)` 可以保存任意 OIDC issuer 下的稳定用户标识。不同 IdP 应使用不同
 registration id，避免多个 issuer 的 `sub` 值空间混用。
 
+### 3.0.1 飞书 OAuth
+
+飞书使用 registration id `feishu`：
+
+- 授权入口：`https://accounts.feishu.cn/open-apis/authen/v1/authorize`
+- Token 入口：`https://open.feishu.cn/open-apis/authen/v2/oauth/token`
+- 用户信息：`https://open.feishu.cn/open-apis/authen/v1/user_info`
+- 回调地址：`{publicBaseUrl}/login/oauth2/code/feishu`
+- 用户主体优先使用 `union_id`，缺失时依次使用 `open_id`、`user_id`
+- 企业邮箱优先使用 `enterprise_email`，其次使用 `email`
+
+飞书 Token 入口要求 JSON 请求体，因此由
+`FeishuOAuth2AccessTokenResponseClient` 完成授权码交换；其他 OAuth Provider
+仍使用 Spring Security 默认客户端。
+
+部署时通过 `OAUTH2_FEISHU_CLIENT_ID`、`OAUTH2_FEISHU_CLIENT_SECRET` 提供应用凭证。
+凭证未配置时，认证目录不会展示飞书登录入口。
+
+### 3.0.2 关闭本地账号认证
+
+`SKILLHUB_AUTH_LOCAL_ENABLED=false` 时，`/api/v1/auth/local/**` 返回 `403`，
+本地 Direct Auth Provider 不加载，认证目录不返回 `local-password`，前端隐藏本地登录、注册和密码重置入口。
+该配置不影响 OAuth、OIDC、Device Flow 或 API Token。
+
 ### 3.1 统一 Session 建立约束
 
 所有 Web 登录入口都必须通过统一的 `PlatformSessionService` 建立登录态，包括：

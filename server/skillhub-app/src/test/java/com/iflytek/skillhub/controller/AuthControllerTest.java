@@ -168,15 +168,33 @@ class AuthControllerTest {
     }
 
     @Test
-    void methodsShouldExposeStandardLoginCatalog() throws Exception {
+    void methodsShouldHideLocalPasswordWhenLocalAuthIsDisabled() throws Exception {
         mockMvc.perform(get("/api/v1/auth/methods").param("returnTo", "/dashboard/publish"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(0))
-            .andExpect(jsonPath("$.data.length()").value(2))
-            .andExpect(jsonPath("$.data[*].id", hasItems("local-password", "oauth-github")))
-            .andExpect(jsonPath("$.data[?(@.id=='local-password')].methodType").value(hasItems("PASSWORD")))
+            .andExpect(jsonPath("$.data.length()").value(1))
+            .andExpect(jsonPath("$.data[*].id", hasItems("oauth-github")))
             .andExpect(jsonPath("$.data[?(@.id=='oauth-github')].actionUrl")
                 .value(hasItems("/oauth2/authorization/github?returnTo=%2Fdashboard%2Fpublish")));
+    }
+
+    @Test
+    void localAuthenticationEndpointsShouldBeForbiddenWhenLocalAuthIsDisabled() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/local/login")
+                .with(csrf())
+                .contentType("application/json")
+                .content("""
+                    {"username":"alice","password":"Abcd123!"}
+                    """))
+            .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/v1/auth/local/register")
+                .with(csrf())
+                .contentType("application/json")
+                .content("""
+                    {"username":"alice","password":"Abcd123!","email":"alice@example.com"}
+                    """))
+            .andExpect(status().isForbidden());
     }
 
     @Test

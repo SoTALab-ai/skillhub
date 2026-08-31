@@ -52,6 +52,7 @@ data:
   {{- $deviceAuthVerificationUri = printf "%s/cli/auth" (trimSuffix "/" .Values.publicBaseUrl) }}
   {{- end }}
   device-auth-verification-uri: {{ $deviceAuthVerificationUri | quote }}
+  auth-local-enabled: {{ .Values.auth.local.enabled | quote }}
   auth-direct-enabled: {{ .Values.auth.direct.enabled | quote }}
   auth-direct-provider: {{ .Values.auth.direct.provider | quote }}
 

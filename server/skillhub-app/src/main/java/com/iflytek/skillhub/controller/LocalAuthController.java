@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.controller;
 
 import com.iflytek.skillhub.auth.local.LocalAuthService;
+import com.iflytek.skillhub.auth.local.LocalAuthProperties;
 import com.iflytek.skillhub.auth.local.PasswordResetService;
 import com.iflytek.skillhub.auth.exception.AuthFlowException;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
@@ -34,6 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/auth/local")
 public class LocalAuthController extends BaseApiController {
 
+    private final LocalAuthProperties localAuthProperties;
     private final LocalAuthService localAuthService;
     private final SkillHubMetrics skillHubMetrics;
     private final PlatformSessionService platformSessionService;
@@ -42,6 +44,7 @@ public class LocalAuthController extends BaseApiController {
     private final AuthMeResponseAssembler authMeResponseAssembler;
 
     public LocalAuthController(ApiResponseFactory responseFactory,
+                               LocalAuthProperties localAuthProperties,
                                LocalAuthService localAuthService,
                                SkillHubMetrics skillHubMetrics,
                                PlatformSessionService platformSessionService,
@@ -49,6 +52,7 @@ public class LocalAuthController extends BaseApiController {
                                PasswordResetService passwordResetService,
                                AuthMeResponseAssembler authMeResponseAssembler) {
         super(responseFactory);
+        this.localAuthProperties = localAuthProperties;
         this.localAuthService = localAuthService;
         this.skillHubMetrics = skillHubMetrics;
         this.platformSessionService = platformSessionService;
@@ -61,6 +65,7 @@ public class LocalAuthController extends BaseApiController {
     @RateLimit(category = "auth-register", authenticated = 10, anonymous = 5, windowSeconds = 300)
     public ApiResponse<AuthMeResponse> register(@Valid @RequestBody LocalRegisterRequest request,
                                                 HttpServletRequest httpRequest) {
+        assertLocalAuthEnabled();
         PlatformPrincipal principal = localAuthService.register(request.username(), request.password(), request.email());
         skillHubMetrics.incrementUserRegister();
         platformSessionService.establishSession(principal, httpRequest);
@@ -71,6 +76,7 @@ public class LocalAuthController extends BaseApiController {
     @RateLimit(category = "auth-local-login", authenticated = 20, anonymous = 10, windowSeconds = 60)
     public ApiResponse<AuthMeResponse> login(@Valid @RequestBody LocalLoginRequest request,
                                              HttpServletRequest httpRequest) {
+        assertLocalAuthEnabled();
         authFailureThrottleService.assertAllowed("local", request.username(), resolveClientIp(httpRequest));
         PlatformPrincipal principal;
         try {
@@ -95,6 +101,7 @@ public class LocalAuthController extends BaseApiController {
     @RateLimit(category = "auth-change-password", authenticated = 5, anonymous = 20, windowSeconds = 300)
     public ApiResponse<Void> changePassword(@AuthenticationPrincipal PlatformPrincipal principal,
                                             @Valid @RequestBody ChangePasswordRequest request) {
+        assertLocalAuthEnabled();
         if (principal == null) {
             throw new UnauthorizedException("error.auth.required");
         }
@@ -105,6 +112,7 @@ public class LocalAuthController extends BaseApiController {
     @PostMapping("/password-reset/request")
     @RateLimit(category = "auth-password-reset-request", authenticated = 8, anonymous = 5, windowSeconds = 300)
     public ApiResponse<Void> requestPasswordReset(@Valid @RequestBody PasswordResetRequestDto request) {
+        assertLocalAuthEnabled();
         passwordResetService.requestPasswordReset(request.email());
         return ok("response.auth.password.reset.requested", null);
     }
@@ -112,6 +120,7 @@ public class LocalAuthController extends BaseApiController {
     @PostMapping("/password-reset/confirm")
     @RateLimit(category = "auth-password-reset-confirm", authenticated = 10, anonymous = 10, windowSeconds = 300)
     public ApiResponse<Void> confirmPasswordReset(@Valid @RequestBody PasswordResetConfirmRequest request) {
+        assertLocalAuthEnabled();
         passwordResetService.confirmPasswordReset(request.email(), request.code(), request.newPassword());
         return ok("response.auth.password.reset.confirmed", null);
     }
@@ -128,5 +137,11 @@ public class LocalAuthController extends BaseApiController {
             ip = ip.split(",")[0].trim();
         }
         return ip;
+    }
+
+    private void assertLocalAuthEnabled() {
+        if (!localAuthProperties.isEnabled()) {
+            throw new AuthFlowException(HttpStatus.FORBIDDEN, "error.auth.local.disabled");
+        }
     }
 }

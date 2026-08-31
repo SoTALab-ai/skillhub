@@ -21,8 +21,16 @@
     "auth": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["direct"],
+      "required": ["local", "direct"],
       "properties": {
+        "local": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled"],
+          "properties": {
+            "enabled": { "type": "boolean" }
+          }
+        },
         "direct": {
           "type": "object",
           "additionalProperties": false,
@@ -156,6 +164,8 @@
         "downloadAnonCookieSecret": { "type": "string" },
         "oauth2GithubClientId": { "type": "string" },
         "oauth2GithubClientSecret": { "type": "string" },
+        "oauth2FeishuClientId": { "type": "string" },
+        "oauth2FeishuClientSecret": { "type": "string" },
         "scannerLlmApiKey": { "type": "string" },
         "scannerLlmBaseUrl": { "type": "string" },
         "scannerLlmModel": { "type": "string" }

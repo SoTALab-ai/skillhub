@@ -290,6 +290,11 @@ spec:
                 configMapKeyRef:
                   name: {{ include "skillhub.fullname" . }}-config
                   key: device-auth-verification-uri
+            - name: SKILLHUB_AUTH_LOCAL_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: auth-local-enabled
             - name: SKILLHUB_AUTH_DIRECT_ENABLED
               valueFrom:
                 configMapKeyRef:
@@ -351,6 +356,18 @@ spec:
                 secretKeyRef:
                   name: {{ include "skillhub.secretName" . }}
                   key: oauth2-github-client-secret
+                  optional: true
+            - name: OAUTH2_FEISHU_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillhub.secretName" . }}
+                  key: oauth2-feishu-client-id
+                  optional: true
+            - name: OAUTH2_FEISHU_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillhub.secretName" . }}
+                  key: oauth2-feishu-client-secret
                   optional: true
 
             {{- if .Values.server.javaOpts }}
