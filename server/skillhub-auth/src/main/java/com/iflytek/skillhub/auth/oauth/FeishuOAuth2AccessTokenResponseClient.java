@@ -13,6 +13,7 @@ import org.springframework.security.oauth2.core.OAuth2AccessToken.TokenType;
 import org.springframework.security.oauth2.core.OAuth2AuthorizationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AccessTokenResponse;
+import org.springframework.security.oauth2.core.endpoint.PkceParameterNames;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -59,6 +60,11 @@ public class FeishuOAuth2AccessTokenResponseClient
         payload.put("client_secret", registration.getClientSecret());
         payload.put("code", authorizationExchange.getAuthorizationResponse().getCode());
         payload.put("redirect_uri", authorizationExchange.getAuthorizationRequest().getRedirectUri());
+        String codeVerifier = authorizationExchange.getAuthorizationRequest()
+                .getAttribute(PkceParameterNames.CODE_VERIFIER);
+        if (codeVerifier != null && !codeVerifier.isBlank()) {
+            payload.put(PkceParameterNames.CODE_VERIFIER, codeVerifier);
+        }
 
         Map<String, Object> response;
         try {
