@@ -3,6 +3,8 @@ package com.iflytek.skillhub.auth.policy;
 import com.iflytek.skillhub.auth.oauth.OAuthClaims;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Allows Feishu login only when the tenant selected for the current OAuth flow is allowlisted.
@@ -13,6 +15,7 @@ import java.util.stream.Collectors;
  */
 public class FeishuTenantAllowlistAccessPolicy implements AccessPolicy {
 
+    private static final Logger log = LoggerFactory.getLogger(FeishuTenantAllowlistAccessPolicy.class);
     static final String FEISHU_PROVIDER = "feishu";
     static final String TENANT_KEY_CLAIM = "tenant_key";
 
@@ -28,16 +31,22 @@ public class FeishuTenantAllowlistAccessPolicy implements AccessPolicy {
     @Override
     public AccessDecision evaluate(OAuthClaims claims) {
         if (!FEISHU_PROVIDER.equals(claims.provider())) {
+            log.info("Feishu tenant access policy denied non-Feishu provider: {}", claims.provider());
             return AccessDecision.DENY;
         }
 
         Object rawTenantKey = claims.extra().get(TENANT_KEY_CLAIM);
         if (!(rawTenantKey instanceof String tenantKey) || tenantKey.isBlank()) {
+            log.info("Feishu tenant access policy denied login with missing tenant_key");
             return AccessDecision.DENY;
         }
 
-        return allowedTenantKeys.contains(tenantKey.trim())
+        String normalizedTenantKey = tenantKey.trim();
+        AccessDecision decision = allowedTenantKeys.contains(normalizedTenantKey)
                 ? AccessDecision.ALLOW
                 : AccessDecision.DENY;
+        log.info("Feishu tenant access policy evaluated tenant_key={} decision={}",
+                normalizedTenantKey, decision);
+        return decision;
     }
 }
