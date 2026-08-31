@@ -1,6 +1,11 @@
 package com.iflytek.skillhub.domain.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iflytek.skillhub.domain.event.SkillPublishedEvent;
+import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
+import com.iflytek.skillhub.domain.skill.Skill;
+import com.iflytek.skillhub.domain.skill.SkillRepository;
+import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
@@ -12,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -38,6 +44,15 @@ class SecurityScanServiceTest {
 
     @Mock
     private ScanTaskProducer scanTaskProducer;
+
+    @Mock
+    private SkillRepository skillRepository;
+
+    @Mock
+    private ReviewTaskRepository reviewTaskRepository;
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     private SecurityScanService service;
 
@@ -272,6 +287,59 @@ class SecurityScanServiceTest {
     }
 
     @Test
+    void processScanResult_autoApprovesSafePublicVersion() throws Exception {
+        service = autoReviewService();
+        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER);
+        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
+        setId(version, 42L);
+        version.setStatus(SkillVersionStatus.SCANNING);
+        version.setRequestedVisibility(SkillVisibility.PUBLIC);
+        Skill skill = new Skill(1L, "safe-skill", "publisher-1", SkillVisibility.PUBLIC);
+        setId(skill, 8L);
+
+        given(auditRepository.findLatestActiveByVersionIdAndScannerType(42L, ScannerType.SKILL_SCANNER))
+                .willReturn(Optional.of(audit));
+        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+        given(skillRepository.findById(8L)).willReturn(Optional.of(skill));
+
+        SecurityScanResponse response = new SecurityScanResponse(
+                "scan-safe", SecurityVerdict.SAFE, 0, null, List.of(), 0.25);
+
+        service.processScanResult(42L, ScannerType.SKILL_SCANNER, response);
+
+        assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.PUBLISHED);
+        assertThat(version.getPublishedAt()).isNotNull();
+        assertThat(skill.getLatestVersionId()).isEqualTo(42L);
+        assertThat(skill.getVisibility()).isEqualTo(SkillVisibility.PUBLIC);
+        verify(skillRepository).save(skill);
+        verify(eventPublisher).publishEvent(any(SkillPublishedEvent.class));
+    }
+
+    @Test
+    void processScanResult_autoRejectsUnsafePublicVersion() throws Exception {
+        service = autoReviewService();
+        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER);
+        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
+        setId(version, 42L);
+        version.setStatus(SkillVersionStatus.SCANNING);
+        version.setRequestedVisibility(SkillVisibility.PUBLIC);
+
+        given(auditRepository.findLatestActiveByVersionIdAndScannerType(42L, ScannerType.SKILL_SCANNER))
+                .willReturn(Optional.of(audit));
+        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+
+        SecurityScanResponse response = new SecurityScanResponse(
+                "scan-dangerous", SecurityVerdict.DANGEROUS, 1, "HIGH", List.of(), 0.25);
+
+        service.processScanResult(42L, ScannerType.SKILL_SCANNER, response);
+
+        assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.REJECTED);
+        assertThat(version.getPublishedAt()).isNull();
+        verify(skillRepository, never()).save(any(Skill.class));
+        verify(eventPublisher, never()).publishEvent(any());
+    }
+
+    @Test
     void triggerScan_shouldNotChangeStatusWhenVersionAlreadyPublished() throws Exception {
         SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
         setId(version, 42L);
@@ -323,6 +391,21 @@ class SecurityScanServiceTest {
         Field field = target.getClass().getDeclaredField("id");
         field.setAccessible(true);
         field.set(target, id);
+    }
+
+    private SecurityScanService autoReviewService() {
+        return new SecurityScanService(
+                auditRepository,
+                skillVersionRepository,
+                scanTaskProducer,
+                new ObjectMapper(),
+                "local",
+                true,
+                skillRepository,
+                reviewTaskRepository,
+                eventPublisher,
+                true
+        );
     }
 
     private void commitRegisteredSynchronizations() {

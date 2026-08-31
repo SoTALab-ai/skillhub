@@ -38,6 +38,10 @@ accessPolicy:
   allowedFeishuTenantKeys: []
   whitelistedSubjects: []
 
+publish:
+  # Automatically publish SAFE scan results and reject unsafe results without manual review.
+  autoApproveAfterScan: false
+
 builtinSkills:
   enabled: true
 
