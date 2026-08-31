@@ -384,6 +384,8 @@ spec:
                   name: {{ include "skillhub.secretName" . }}
                   key: oauth2-feishu-client-secret
                   optional: true
+            - name: SKILLHUB_PUBLISH_AUTO_APPROVE_AFTER_SCAN
+              value: {{ .Values.publish.autoApproveAfterScan | quote }}
 
             {{- if .Values.server.javaOpts }}
             - name: JAVA_OPTS

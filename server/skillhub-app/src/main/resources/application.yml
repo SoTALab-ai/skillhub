@@ -209,6 +209,7 @@ skillhub:
       anonymous-cookie-max-age: ${SKILLHUB_DOWNLOAD_ANON_COOKIE_MAX_AGE:P30D}
       anonymous-cookie-secret: ${SKILLHUB_DOWNLOAD_ANON_COOKIE_SECRET:}
   publish:
+    auto-approve-after-scan: ${SKILLHUB_PUBLISH_AUTO_APPROVE_AFTER_SCAN:false}
     max-file-count: 100
     max-single-file-size: 10485760 # 10MB
     max-package-size: 104857600 # 100MB
