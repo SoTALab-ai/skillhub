@@ -66,6 +66,9 @@ type RuntimeConfig = {
   appBaseUrl?: string
   authDirectEnabled?: string
   authDirectProvider?: string
+  authOAuthFallbackProvider?: string
+  authOAuthFallbackDisplayName?: string
+  authOAuthFallbackActionUrl?: string
   authSessionBootstrapEnabled?: string
   authSessionBootstrapProvider?: string
   authSessionBootstrapAuto?: string
@@ -170,6 +173,29 @@ export function getDirectAuthRuntimeConfig(): DirectAuthRuntimeConfig {
     enabled: parseBooleanFlag(config.authDirectEnabled) && !!provider,
     provider: provider || undefined,
   }
+}
+
+export type OAuthFallbackRuntimeConfig = {
+  provider: string
+  displayName: string
+  actionUrl: string
+}
+
+/**
+ * Returns an operator-configured OAuth entry point that remains visible when the dynamic auth
+ * catalog cannot be loaded. The action URL must stay on the current origin.
+ */
+export function getOAuthFallbackRuntimeConfig(): OAuthFallbackRuntimeConfig | undefined {
+  const config = getRuntimeConfig()
+  const provider = config.authOAuthFallbackProvider?.trim()
+  const displayName = config.authOAuthFallbackDisplayName?.trim()
+  const actionUrl = config.authOAuthFallbackActionUrl?.trim()
+
+  if (!provider || !displayName || !actionUrl?.startsWith('/')) {
+    return undefined
+  }
+
+  return { provider, displayName, actionUrl }
 }
 
 export function getSessionBootstrapRuntimeConfig(): SessionBootstrapRuntimeConfig {

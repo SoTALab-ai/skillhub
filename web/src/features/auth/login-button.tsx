@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { getOAuthFallbackRuntimeConfig } from '@/api/client'
 import { Button } from '@/shared/ui/button'
 import { withBasePath } from '@/shared/lib/base-path'
 import { useAuthMethods } from './use-auth-methods'
@@ -27,10 +28,22 @@ function OAuthIcon({ provider }: { provider: string }) {
 export function LoginButton({ returnTo }: LoginButtonProps) {
   const { t } = useTranslation()
   const { data, isLoading } = useAuthMethods(returnTo)
+  const fallback = getOAuthFallbackRuntimeConfig()
 
-  const providers = (data ?? []).filter((method) => method.methodType === 'OAUTH_REDIRECT')
+  const catalogProviders = (data ?? []).filter((method) => method.methodType === 'OAUTH_REDIRECT')
+  const providers = catalogProviders.length > 0
+    ? catalogProviders
+    : fallback
+      ? [{
+          id: `runtime-oauth-${fallback.provider}`,
+          methodType: 'OAUTH_REDIRECT',
+          provider: fallback.provider,
+          displayName: fallback.displayName,
+          actionUrl: fallback.actionUrl,
+        }]
+      : []
 
-  if (isLoading) {
+  if (isLoading && providers.length === 0) {
     return (
       <div className="space-y-3">
         <Button className="w-full h-12" disabled>
@@ -59,4 +72,3 @@ export function LoginButton({ returnTo }: LoginButtonProps) {
     </div>
   )
 }
-
