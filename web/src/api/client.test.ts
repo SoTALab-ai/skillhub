@@ -40,6 +40,7 @@ import {
   fetchText,
   getAppBaseUrl,
   getDirectAuthRuntimeConfig,
+  getOAuthFallbackRuntimeConfig,
   getSessionBootstrapRuntimeConfig,
   namespaceApi,
 } from './client'
@@ -214,6 +215,37 @@ describe('getDirectAuthRuntimeConfig', () => {
       }
       expect(getDirectAuthRuntimeConfig().enabled).toBe(true)
     }
+  })
+})
+
+describe('getOAuthFallbackRuntimeConfig', () => {
+  it('returns a configured same-origin OAuth fallback', () => {
+    window.__SKILLHUB_RUNTIME_CONFIG__ = {
+      authOAuthFallbackProvider: 'feishu',
+      authOAuthFallbackDisplayName: '飞书',
+      authOAuthFallbackActionUrl: '/oauth2/authorization/feishu',
+    }
+
+    expect(getOAuthFallbackRuntimeConfig()).toEqual({
+      provider: 'feishu',
+      displayName: '飞书',
+      actionUrl: '/oauth2/authorization/feishu',
+    })
+  })
+
+  it('rejects incomplete or cross-origin fallbacks', () => {
+    window.__SKILLHUB_RUNTIME_CONFIG__ = {
+      authOAuthFallbackProvider: 'feishu',
+      authOAuthFallbackDisplayName: '飞书',
+      authOAuthFallbackActionUrl: 'https://example.com/oauth',
+    }
+    expect(getOAuthFallbackRuntimeConfig()).toBeUndefined()
+
+    window.__SKILLHUB_RUNTIME_CONFIG__ = {
+      authOAuthFallbackProvider: 'feishu',
+      authOAuthFallbackActionUrl: '/oauth2/authorization/feishu',
+    }
+    expect(getOAuthFallbackRuntimeConfig()).toBeUndefined()
   })
 })
 
