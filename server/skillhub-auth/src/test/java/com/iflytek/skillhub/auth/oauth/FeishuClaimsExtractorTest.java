@@ -23,6 +23,7 @@ class FeishuClaimsExtractorTest {
         Map<String, Object> profile = Map.of(
                 "union_id", "on_union_123",
                 "open_id", "ou_open_123",
+                "tenant_key", "tenant-zhihu",
                 "name", "Alice",
                 "enterprise_email", "alice@sota-lab.cn",
                 "avatar_url", "https://example.com/avatar.png"
@@ -41,6 +42,7 @@ class FeishuClaimsExtractorTest {
         assertThat(claims.email()).isEqualTo("alice@sota-lab.cn");
         assertThat(claims.emailVerified()).isTrue();
         assertThat(claims.extra()).containsEntry("open_id", "ou_open_123");
+        assertThat(claims.extra()).containsEntry("tenant_key", "tenant-zhihu");
     }
 
     @Test

@@ -305,6 +305,16 @@ spec:
                 configMapKeyRef:
                   name: {{ include "skillhub.fullname" . }}-config
                   key: access-global-anonymous-enabled
+            - name: SKILLHUB_ACCESS_POLICY_MODE
+              value: {{ .Values.accessPolicy.mode | quote }}
+            - name: SKILLHUB_ACCESS_POLICY_ALLOWED_PROVIDERS
+              value: {{ join "," .Values.accessPolicy.allowedProviders | quote }}
+            - name: SKILLHUB_ACCESS_POLICY_ALLOWED_EMAIL_DOMAINS
+              value: {{ join "," .Values.accessPolicy.allowedEmailDomains | quote }}
+            - name: SKILLHUB_ACCESS_POLICY_ALLOWED_FEISHU_TENANT_KEYS
+              value: {{ join "," .Values.accessPolicy.allowedFeishuTenantKeys | quote }}
+            - name: SKILLHUB_ACCESS_POLICY_WHITELISTED_SUBJECTS
+              value: {{ join "," .Values.accessPolicy.whitelistedSubjects | quote }}
             - name: SKILLHUB_BUILTIN_SKILLS_ENABLED
               valueFrom:
                 configMapKeyRef:
