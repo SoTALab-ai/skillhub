@@ -145,6 +145,10 @@ skillhub:
     base-url: ${SKILLHUB_PUBLIC_BASE_URL:}
   access-policy:
     mode: OPEN
+  access:
+    global:
+      # When false, anonymous callers cannot discover, inspect, or download skills in global.
+      anonymous-enabled: ${SKILLHUB_ACCESS_GLOBAL_ANONYMOUS_ENABLED:true}
   storage:
     provider: ${SKILLHUB_STORAGE_PROVIDER:local}
     local:

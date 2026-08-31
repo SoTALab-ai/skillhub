@@ -120,6 +120,24 @@ class SkillDownloadServiceTest {
     }
 
     @Test
+    void testDownloadLatest_RejectsAnonymousGlobalAccessWhenDisabled() throws Exception {
+        Namespace namespace = new Namespace("global", "Global", "system");
+        namespace.setType(NamespaceType.GLOBAL);
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, "demo", "owner-1", SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setLatestVersionId(10L);
+
+        setField(service, "anonymousGlobalAccessEnabled", false);
+        when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, "demo")).thenReturn(List.of(skill));
+
+        assertThrows(DomainForbiddenException.class, () ->
+                service.downloadLatest("global", "demo", null, Map.of()));
+        verify(visibilityChecker, never()).canAccess(any(), any(), any());
+    }
+
+    @Test
     void testDownloadLatest_ShouldRejectSkillWithoutLatest() throws Exception {
         String namespaceSlug = "global";
         String skillSlug = "missing-latest";
@@ -603,8 +621,12 @@ class SkillDownloadServiceTest {
     }
 
     private void setId(Object entity, Long id) throws Exception {
-        Field idField = entity.getClass().getDeclaredField("id");
-        idField.setAccessible(true);
-        idField.set(entity, id);
+        setField(entity, "id", id);
+    }
+
+    private void setField(Object target, String fieldName, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(target, value);
     }
 }

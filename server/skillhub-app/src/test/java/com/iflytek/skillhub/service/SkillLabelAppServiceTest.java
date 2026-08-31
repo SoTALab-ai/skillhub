@@ -9,6 +9,7 @@ import com.iflytek.skillhub.domain.label.SkillLabelService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
@@ -26,6 +27,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -124,6 +126,23 @@ class SkillLabelAppServiceTest {
                 "user-1",
                 Map.of()
         ));
+    }
+
+    @Test
+    void listSkillLabels_shouldHideGlobalLabelsFromAnonymousCallerWhenConfigured() throws Exception {
+        Namespace namespace = new Namespace("global", "Global", "system");
+        namespace.setType(NamespaceType.GLOBAL);
+        setId(namespace, 1L);
+        ReflectionTestUtils.setField(service, "anonymousGlobalAccessEnabled", false);
+        when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(namespace));
+
+        assertThrows(DomainForbiddenException.class, () -> service.listSkillLabels(
+                "global",
+                "brainstorming",
+                null,
+                Map.of()
+        ));
+        verify(skillRepository, never()).findByNamespaceIdAndSlug(1L, "brainstorming");
     }
 
     private void setId(Object entity, Long id) throws Exception {

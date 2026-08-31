@@ -5,6 +5,7 @@ import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.skill.*;
@@ -194,9 +195,26 @@ class SkillTagServiceTest {
                 result.stream().map(SkillTag::getTagName).sorted().collect(Collectors.toList()));
     }
 
+    @Test
+    void testListTags_RejectsAnonymousGlobalAccessWhenDisabled() throws Exception {
+        Namespace namespace = new Namespace("global", "Global", "system");
+        namespace.setType(NamespaceType.GLOBAL);
+        setId(namespace, 1L);
+        setField(service, "anonymousGlobalAccessEnabled", false);
+        when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(namespace));
+
+        assertThrows(DomainForbiddenException.class, () ->
+                service.listTags("global", "demo", null, java.util.Map.of()));
+        verify(skillRepository, never()).findByNamespaceIdAndSlug(anyLong(), anyString());
+    }
+
     private void setId(Object entity, Long id) throws Exception {
-        Field idField = entity.getClass().getDeclaredField("id");
-        idField.setAccessible(true);
-        idField.set(entity, id);
+        setField(entity, "id", id);
+    }
+
+    private void setField(Object target, String fieldName, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(target, value);
     }
 }

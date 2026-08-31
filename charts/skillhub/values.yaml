@@ -24,6 +24,11 @@ auth:
     enabled: false
     provider: local
 
+access:
+  global:
+    # Keep upstream-compatible public access by default. Set false for authenticated-only global.
+    anonymousEnabled: true
+
 builtinSkills:
   enabled: true
 

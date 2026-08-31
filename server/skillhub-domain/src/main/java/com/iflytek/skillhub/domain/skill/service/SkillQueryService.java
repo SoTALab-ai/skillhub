@@ -21,6 +21,7 @@ import com.github.difflib.patch.Patch;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
@@ -62,6 +63,9 @@ public class SkillQueryService {
     private final SkillSlugResolutionService skillSlugResolutionService;
     private final SkillLifecycleProjectionService skillLifecycleProjectionService;
     private final UserAccountRepository userAccountRepository;
+
+    @Value("${skillhub.access.global.anonymous-enabled:true}")
+    private boolean anonymousGlobalAccessEnabled = true;
 
     public SkillQueryService(
             NamespaceRepository namespaceRepository,
@@ -200,6 +204,7 @@ public class SkillQueryService {
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles) {
         Namespace namespace = findNamespace(namespaceSlug);
+        assertGlobalNamespaceAccess(namespace, currentUserId);
         Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
 
         if (namespace.getStatus() == com.iflytek.skillhub.domain.namespace.NamespaceStatus.ARCHIVED
@@ -272,6 +277,7 @@ public class SkillQueryService {
             Pageable pageable) {
 
         Namespace namespace = findNamespace(namespaceSlug);
+        assertGlobalNamespaceAccess(namespace, currentUserId);
         List<Skill> allSkills = skillRepository.findByNamespaceIdAndStatus(namespace.getId(), SkillStatus.ACTIVE);
 
         // Filter by visibility
@@ -302,6 +308,7 @@ public class SkillQueryService {
             Pageable pageable) {
 
         Namespace namespace = findNamespace(namespaceSlug);
+        assertGlobalNamespaceAccess(namespace, currentUserId);
         List<Skill> accessibleSkills = skillRepository
                 .findByNamespaceIdAndStatus(namespace.getId(), SkillStatus.ACTIVE)
                 .stream()
@@ -853,6 +860,7 @@ public class SkillQueryService {
             Skill skill,
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles) {
+        assertGlobalNamespaceAccess(namespace, currentUserId);
         if (namespace.getStatus() == NamespaceStatus.ARCHIVED && !isNamespaceMember(skill.getNamespaceId(), currentUserId, userNsRoles)) {
             throw new DomainForbiddenException("error.namespace.archived", namespace.getSlug());
         }
@@ -864,6 +872,14 @@ public class SkillQueryService {
         }
         if (!visibilityChecker.canAccess(skill, currentUserId, userNsRoles)) {
             throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
+        }
+    }
+
+    private void assertGlobalNamespaceAccess(Namespace namespace, String currentUserId) {
+        if (!anonymousGlobalAccessEnabled
+                && currentUserId == null
+                && namespace.getType() == NamespaceType.GLOBAL) {
+            throw new DomainForbiddenException("error.skill.access.denied", namespace.getSlug());
         }
     }
 

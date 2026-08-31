@@ -42,6 +42,21 @@
         }
       }
     },
+    "access": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["global"],
+      "properties": {
+        "global": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["anonymousEnabled"],
+          "properties": {
+            "anonymousEnabled": { "type": "boolean" }
+          }
+        }
+      }
+    },
     "builtinSkills": {
       "type": "object",
       "additionalProperties": false,
@@ -271,7 +286,7 @@
     "web": { "$ref": "#/definitions/webComponent" },
     "scanner": { "$ref": "#/definitions/scannerComponent" }
   },
-  "required": ["images", "auth", "builtinSkills", "ingress", "s3", "session", "bootstrapAdmin", "springProfilesActive", "secrets", "postgresql", "externalDatabase", "redis", "externalRedis", "server", "web", "scanner"],
+  "required": ["images", "auth", "access", "builtinSkills", "ingress", "s3", "session", "bootstrapAdmin", "springProfilesActive", "secrets", "postgresql", "externalDatabase", "redis", "externalRedis", "server", "web", "scanner"],
   "definitions": {
     "dnsLabel": {
       "type": "string",

@@ -21,6 +21,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 /**
@@ -42,6 +43,9 @@ public class SkillSearchAppService {
     private final ComplianceSnapshotProjectionService complianceSnapshotProjectionService;
     private final RbacService rbacService;
     private final UserAccountRepository userAccountRepository;
+
+    @Value("${skillhub.access.global.anonymous-enabled:true}")
+    private boolean anonymousGlobalAccessEnabled = true;
 
     public SkillSearchAppService(
             SearchQueryService searchQueryService,
@@ -139,7 +143,7 @@ public class SkillSearchAppService {
 
     private SearchVisibilityScope buildVisibilityScope(String userId, Map<Long, NamespaceRole> userNsRoles) {
         if (userId == null) {
-            return SearchVisibilityScope.anonymous();
+            return SearchVisibilityScope.anonymous(anonymousGlobalAccessEnabled);
         }
 
         Map<Long, NamespaceRole> normalizedRoles = userNsRoles != null ? userNsRoles : Map.of();

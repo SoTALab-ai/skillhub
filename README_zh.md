@@ -291,6 +291,9 @@ STORAGE_S3_BUCKET=skillhub
 # 认证
 AUTH_JWT_SECRET=your-secret-key
 AUTH_SESSION_TIMEOUT=30m
+
+# global namespace 仅登录用户可见
+SKILLHUB_ACCESS_GLOBAL_ANONYMOUS_ENABLED=false
 ```
 
 完整配置参考请查看 [`application.yml`](./server/skillhub-app/src/main/resources/application.yml)。
