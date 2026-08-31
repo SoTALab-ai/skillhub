@@ -18,6 +18,7 @@ import org.springframework.security.oauth2.core.endpoint.OAuth2AccessTokenRespon
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationExchange;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationResponse;
+import org.springframework.security.oauth2.core.endpoint.PkceParameterNames;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
@@ -34,7 +35,8 @@ class FeishuOAuth2AccessTokenResponseClientTest {
                           "client_id":"client-id",
                           "client_secret":"client-secret",
                           "code":"authorization-code",
-                          "redirect_uri":"https://skills.sota-lab.cn/login/oauth2/code/feishu"
+                          "redirect_uri":"https://skills.sota-lab.cn/login/oauth2/code/feishu",
+                          "code_verifier":"pkce-code-verifier"
                         }
                         """))
                 .andRespond(withSuccess("""
@@ -101,6 +103,8 @@ class FeishuOAuth2AccessTokenResponseClientTest {
                 .redirectUri(redirectUri)
                 .scopes(registration.getScopes())
                 .state("state-123")
+                .attributes(attributes -> attributes.put(
+                        PkceParameterNames.CODE_VERIFIER, "pkce-code-verifier"))
                 .build();
         OAuth2AuthorizationResponse authorizationResponse = OAuth2AuthorizationResponse
                 .success("authorization-code")
