@@ -74,12 +74,14 @@ public enum AccessDecision {
 ```yaml
 astron:
   access-policy:
-    mode: EMAIL_DOMAIN   # OPEN / PROVIDER_ALLOWLIST / EMAIL_DOMAIN / SUBJECT_WHITELIST
+    mode: EMAIL_DOMAIN   # OPEN / PROVIDER_ALLOWLIST / EMAIL_DOMAIN / FEISHU_TENANT_ALLOWLIST / SUBJECT_WHITELIST
     allowed-providers:
       - github
     allowed-email-domains:
       - company.com
       - subsidiary.com
+    allowed-feishu-tenant-keys:
+      - tenant-key-from-feishu-user-info
 ```
 
 | 策略 | 判定依据 | 说明 |
@@ -87,7 +89,12 @@ astron:
 | `OPEN` | 无限制 | 所有 OAuth 登录用户自动准入 |
 | `PROVIDER_ALLOWLIST` | `claims.provider` | 仅允许指定 Provider 登录 |
 | `EMAIL_DOMAIN` | `claims.email` + `claims.emailVerified` | 仅允许已验证邮箱且域名匹配（email 为空或未验证则 DENY） |
+| `FEISHU_TENANT_ALLOWLIST` | `claims.provider` + `claims.extra.tenant_key` | 仅允许本次飞书 OAuth 所选企业在 tenant_key 白名单内；缺失 tenant_key 或非飞书 Provider 均 DENY |
 | `SUBJECT_WHITELIST` | `claims.provider` + `claims.subject` | 按 `provider:subject` 白名单，管理员预添加 |
+
+飞书账号可能同时属于多个企业。`FEISHU_TENANT_ALLOWLIST` 必须读取本次
+`user_info` 响应中的 `tenant_key`，并在每次 OAuth 登录时重新判定；不能依据此前成功
+登录形成的 `union_id`、用户绑定或历史企业归属放行。
 
 ### 2.2 准入失败处理
 

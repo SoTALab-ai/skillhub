@@ -57,6 +57,36 @@
         }
       }
     },
+    "accessPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "allowedProviders", "allowedEmailDomains", "allowedFeishuTenantKeys", "whitelistedSubjects"],
+      "properties": {
+        "mode": {
+          "enum": ["OPEN", "PROVIDER_ALLOWLIST", "EMAIL_DOMAIN", "FEISHU_TENANT_ALLOWLIST", "SUBJECT_WHITELIST"]
+        },
+        "allowedProviders": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "allowedEmailDomains": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "allowedFeishuTenantKeys": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "whitelistedSubjects": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
     "builtinSkills": {
       "type": "object",
       "additionalProperties": false,

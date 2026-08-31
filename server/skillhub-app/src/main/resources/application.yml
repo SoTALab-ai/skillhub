@@ -144,7 +144,11 @@ skillhub:
   public:
     base-url: ${SKILLHUB_PUBLIC_BASE_URL:}
   access-policy:
-    mode: OPEN
+    mode: ${SKILLHUB_ACCESS_POLICY_MODE:OPEN}
+    allowed-providers: ${SKILLHUB_ACCESS_POLICY_ALLOWED_PROVIDERS:}
+    allowed-email-domains: ${SKILLHUB_ACCESS_POLICY_ALLOWED_EMAIL_DOMAINS:}
+    allowed-feishu-tenant-keys: ${SKILLHUB_ACCESS_POLICY_ALLOWED_FEISHU_TENANT_KEYS:}
+    whitelisted-subjects: ${SKILLHUB_ACCESS_POLICY_WHITELISTED_SUBJECTS:}
   access:
     global:
       # When false, anonymous callers cannot discover, inspect, or download skills in global.

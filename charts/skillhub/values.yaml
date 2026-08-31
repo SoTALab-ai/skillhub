@@ -29,6 +29,15 @@ access:
     # Keep upstream-compatible public access by default. Set false for authenticated-only global.
     anonymousEnabled: true
 
+accessPolicy:
+  # OPEN | PROVIDER_ALLOWLIST | EMAIL_DOMAIN | FEISHU_TENANT_ALLOWLIST | SUBJECT_WHITELIST
+  mode: OPEN
+  allowedProviders: []
+  allowedEmailDomains: []
+  # tenant_key values from the Feishu user_info response. Missing keys fail closed.
+  allowedFeishuTenantKeys: []
+  whitelistedSubjects: []
+
 builtinSkills:
   enabled: true
 

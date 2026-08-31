@@ -193,8 +193,22 @@ helm -n skillhub upgrade -i skillhub ./charts/skillhub \
 | 参数 | 描述 | 默认值 |
 |------|------|--------|
 | `access.global.anonymousEnabled` | 是否允许匿名用户发现、查看和下载 `global` namespace 中的 skills | `true` |
+| `accessPolicy.mode` | OAuth 准入策略 | `OPEN` |
+| `accessPolicy.allowedFeishuTenantKeys` | `FEISHU_TENANT_ALLOWLIST` 模式允许的飞书企业 tenant_key | `[]` |
 
 设置为 `false` 后，匿名搜索会排除 `global`，匿名详情、标签、文件与下载请求会被拒绝；登录用户保持可见。
+
+仅允许指定飞书企业登录时，按本次 OAuth `user_info` 返回的 `tenant_key` 配置：
+
+```yaml
+accessPolicy:
+  mode: FEISHU_TENANT_ALLOWLIST
+  allowedFeishuTenantKeys:
+    - tenant-key-from-feishu-user-info
+```
+
+同一飞书账号属于多个企业时，每次登录都按当前选择企业的 `tenant_key` 重新判定；
+缺失 tenant_key、选择其他企业或使用非飞书 Provider 均拒绝。
 
 ### 私有镜像仓库
 
