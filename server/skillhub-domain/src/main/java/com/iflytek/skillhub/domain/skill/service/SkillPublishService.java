@@ -48,6 +48,7 @@ import java.util.Comparator;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.zip.ZipEntry;
@@ -69,6 +70,26 @@ public class SkillPublishService {
             SkillVersionStatus.SCAN_FAILED,
             SkillVersionStatus.UPLOADED,
             SkillVersionStatus.REJECTED
+    );
+    private static final Map<String, String> DISPLAY_NAME_TERMS = Map.ofEntries(
+            Map.entry("ai", "AI"),
+            Map.entry("api", "API"),
+            Map.entry("apex", "APEX"),
+            Map.entry("cli", "CLI"),
+            Map.entry("csv", "CSV"),
+            Map.entry("gcs", "GCS"),
+            Map.entry("gke", "GKE"),
+            Map.entry("gpu", "GPU"),
+            Map.entry("k8s", "K8s"),
+            Map.entry("llm", "LLM"),
+            Map.entry("pdf", "PDF"),
+            Map.entry("rca", "RCA"),
+            Map.entry("s3", "S3"),
+            Map.entry("sft", "SFT"),
+            Map.entry("skillhub", "SkillHub"),
+            Map.entry("ssh", "SSH"),
+            Map.entry("ui", "UI"),
+            Map.entry("vke", "VKE")
     );
     private static final Logger log = LoggerFactory.getLogger(SkillPublishService.class);
 
@@ -558,7 +579,7 @@ public class SkillPublishService {
         }
 
         // 12. Update skill metadata and move the published pointer for auto-publish flows
-        skill.setDisplayName(metadata.name());
+        skill.setDisplayName(resolveDisplayName(metadata, skill.getDisplayName()));
         skill.setSummary(metadata.description());
         if (autoPublish || visibility == SkillVisibility.PRIVATE) {
             // Update latestVersionId for autoPublish or PRIVATE skill (UPLOADED status)
@@ -574,6 +595,42 @@ public class SkillPublishService {
 
         // 13. Return identifiers for the created version
         return new PublishResult(skill.getId(), skill.getSlug(), version);
+    }
+
+    static String resolveDisplayName(SkillMetadata metadata, String currentDisplayName) {
+        Object rawTitle = metadata.frontmatter() != null
+                ? metadata.frontmatter().get("title")
+                : null;
+        if (rawTitle != null && !rawTitle.toString().isBlank()) {
+            return rawTitle.toString().trim();
+        }
+
+        if (currentDisplayName != null
+                && !currentDisplayName.isBlank()
+                && !currentDisplayName.equals(metadata.name())
+                && !currentDisplayName.equals(SlugValidator.slugify(metadata.name()))) {
+            return currentDisplayName;
+        }
+
+        return humanizeDisplayName(metadata.name());
+    }
+
+    private static String humanizeDisplayName(String rawName) {
+        String[] terms = rawName.trim().split("[-_\\s]+");
+        List<String> displayTerms = new ArrayList<>();
+        for (String term : terms) {
+            if (term.isBlank()) {
+                continue;
+            }
+            String normalized = term.toLowerCase(Locale.ROOT);
+            String knownTerm = DISPLAY_NAME_TERMS.get(normalized);
+            if (knownTerm != null) {
+                displayTerms.add(knownTerm);
+                continue;
+            }
+            displayTerms.add(Character.toUpperCase(normalized.charAt(0)) + normalized.substring(1));
+        }
+        return displayTerms.isEmpty() ? rawName.trim() : String.join(" ", displayTerms);
     }
 
     private void deleteReplaceableVersionArtifacts(Skill skill, SkillVersion version, String namespaceSlug) {

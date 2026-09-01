@@ -1704,6 +1704,45 @@ class SkillPublishServiceTest {
         verify(reviewTaskRepository, never()).save(any(ReviewTask.class));
     }
 
+    @Test
+    void resolveDisplayName_prefersExplicitFrontmatterTitle() {
+        SkillMetadata metadata = new SkillMetadata(
+                "skillhub-operator",
+                "Test",
+                "1.0.0",
+                "Body",
+                Map.of("title", "  SkillHub  ")
+        );
+
+        assertEquals("SkillHub", SkillPublishService.resolveDisplayName(metadata, "Old title"));
+    }
+
+    @Test
+    void resolveDisplayName_preservesExistingReadableTitleWithoutFrontmatterTitle() {
+        SkillMetadata metadata = new SkillMetadata(
+                "semantic-clustering-analysis",
+                "Test",
+                "1.0.0",
+                "Body",
+                Map.of()
+        );
+
+        assertEquals("语义聚类分析", SkillPublishService.resolveDisplayName(metadata, "语义聚类分析"));
+    }
+
+    @Test
+    void resolveDisplayName_humanizesMachineReadableNameForNewSkill() {
+        SkillMetadata metadata = new SkillMetadata(
+                "apex-sft-qwen-training",
+                "Test",
+                "1.0.0",
+                "Body",
+                Map.of()
+        );
+
+        assertEquals("APEX SFT Qwen Training", SkillPublishService.resolveDisplayName(metadata, null));
+    }
+
     private record PublishFixture(List<PackageEntry> entries) {
     }
 
