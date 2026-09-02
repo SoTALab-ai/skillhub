@@ -16,6 +16,7 @@ import { useMySkills, useSubmitPromotion } from '@/shared/hooks/use-user-queries
 import { useDebounce } from '@/shared/hooks/use-debounce'
 import { getHeadlineVersion, getPublishedVersion, getOwnerPreviewVersion, hasPendingOwnerPreview } from '@/shared/lib/skill-lifecycle'
 import { formatCompactCount } from '@/shared/lib/number-format'
+import { getNamespaceBadgeLabel, getNamespaceDisplayName } from '@/shared/lib/namespace-display'
 import { toast } from '@/shared/lib/toast'
 import { buildReturnTo } from '@/shared/lib/auth-route'
 import { ApiError } from '@/api/client'
@@ -313,9 +314,9 @@ export function MySkillsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL_NAMESPACES_VALUE}>{t('mySkills.namespaceFilterAll')}</SelectItem>
-              {(namespaceOptions ?? []).map((ns: { id: number; slug: string }) => (
+              {(namespaceOptions ?? []).map((ns: { id: number; slug: string; displayName?: string }) => (
                 <SelectItem key={ns.id} value={ns.slug}>
-                  @{ns.slug}
+                  {getNamespaceDisplayName(ns.slug, ns.displayName)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -374,7 +375,7 @@ export function MySkillsPage() {
                           <p className="text-sm text-muted-foreground mb-3 leading-relaxed">{skill.summary}</p>
                         )}
                         <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                          <span className="handle-tag">@{skill.namespace}</span>
+                          <span className="handle-tag">{getNamespaceBadgeLabel(skill.namespace)}</span>
                           {headlineVersion ? (
                             <span className="font-mono text-xs">v{headlineVersion.version}</span>
                           ) : null}

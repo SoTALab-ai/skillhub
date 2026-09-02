@@ -5,6 +5,7 @@ import { Card } from '@/shared/ui/card'
 import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { getHeadlineVersion } from '@/shared/lib/skill-lifecycle'
 import { formatCompactCount } from '@/shared/lib/number-format'
+import { getNamespaceBadgeLabel } from '@/shared/lib/namespace-display'
 import { Bookmark, ShieldCheck, User, Clock } from 'lucide-react'
 
 interface SkillCardProps {
@@ -70,7 +71,10 @@ export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCard
             </h3>
           </div>
           <div className="flex items-center gap-2">
-            <NamespaceBadge type="TEAM" name={`@${skill.namespace}`} />
+            <NamespaceBadge
+              type={skill.namespace === 'global' ? 'GLOBAL' : 'TEAM'}
+              name={getNamespaceBadgeLabel(skill.namespace)}
+            />
           </div>
         </div>
 
