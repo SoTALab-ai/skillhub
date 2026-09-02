@@ -34,6 +34,7 @@ import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { incrementSkillDownloadCount } from '@/shared/lib/skill-download-cache'
 import { getSkillLabelSearch, getSkillSquareSearch, normalizeSkillDetailReturnTo } from '@/shared/lib/skill-navigation'
 import { formatCompactCount } from '@/shared/lib/number-format'
+import { getNamespaceBadgeLabel } from '@/shared/lib/namespace-display'
 import { resolveDocumentationFilePath } from '@/shared/lib/skill-documentation'
 import { getHeadlineVersion, getOwnerPreviewVersion, getPublishedVersion } from '@/shared/lib/skill-lifecycle'
 import { navigateAfterOverlays } from '@/shared/lib/navigate-after-overlays'
@@ -799,7 +800,10 @@ export function SkillDetailPage() {
             {t('skillDetail.back')}
           </Button>
           <div className="flex items-center gap-3 mb-1">
-            <NamespaceBadge type="GLOBAL" name={namespace} />
+            <NamespaceBadge
+              type={namespace === 'global' ? 'GLOBAL' : 'TEAM'}
+              name={getNamespaceBadgeLabel(namespace)}
+            />
             {skill.status && (
               <span className={cn(
                 'badge-soft',
@@ -1140,7 +1144,10 @@ export function SkillDetailPage() {
 
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">{t('skillDetail.namespaceLabel')}</div>
-            <NamespaceBadge type="GLOBAL" name={namespace} />
+            <NamespaceBadge
+              type={namespace === 'global' ? 'GLOBAL' : 'TEAM'}
+              name={getNamespaceBadgeLabel(namespace)}
+            />
           </div>
 
           <div className="h-px bg-border/40" />

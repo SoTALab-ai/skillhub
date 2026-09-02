@@ -5,6 +5,7 @@ import type { SkillSummary } from '@/api/types'
 import { useMySkills } from '@/shared/hooks/use-user-queries'
 import { canViewGovernanceCenter } from '@/shared/lib/governance-access'
 import { getHeadlineVersion } from '@/shared/lib/skill-lifecycle'
+import { getNamespaceBadgeLabel } from '@/shared/lib/namespace-display'
 import { TokenList } from '@/features/token/token-list'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { APP_SHELL_PAGE_CLASS_NAME } from '@/app/page-shell-style'
@@ -148,7 +149,9 @@ export function DashboardPage() {
                         className="rounded-lg border border-border/60 px-3 py-3 transition-colors hover:bg-accent/40"
                       >
                         <div className="truncate text-sm font-medium">{skill.displayName}</div>
-                        <div className="mt-1 truncate text-xs text-muted-foreground">@{skill.namespace}</div>
+                        <div className="mt-1 truncate text-xs text-muted-foreground">
+                          {getNamespaceBadgeLabel(skill.namespace)}
+                        </div>
                         {getHeadlineVersion(skill) ? (
                           <div className="mt-2 inline-flex rounded-full bg-secondary px-2 py-1 text-xs text-muted-foreground">
                             v{getHeadlineVersion(skill)?.version}
