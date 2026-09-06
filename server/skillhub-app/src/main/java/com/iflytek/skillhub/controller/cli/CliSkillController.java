@@ -101,11 +101,11 @@ public class CliSkillController extends BaseApiController {
             @PathVariable String namespace,
             @RequestPart("file") MultipartFile file,
             @RequestPart(value = "visibility", required = false) String visibility,
-            @AuthenticationPrincipal PlatformPrincipal principal) throws IOException {
+            @AuthenticationPrincipal PlatformPrincipal principal) {
         List<PackageEntry> entries;
         try {
             entries = archiveExtractor.extract(file);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IOException e) {
             throw new DomainBadRequestException("error.skill.publish.package.invalid", e.getMessage());
         }
         SkillVisibility resolvedVisibility;
@@ -125,11 +125,11 @@ public class CliSkillController extends BaseApiController {
             @PathVariable String namespace,
             @RequestPart("file") MultipartFile file,
             @RequestPart(value = "visibility", required = false) String visibility,
-            @AuthenticationPrincipal PlatformPrincipal principal) throws IOException {
+            @AuthenticationPrincipal PlatformPrincipal principal) {
         List<PackageEntry> entries;
         try {
             entries = archiveExtractor.extract(file);
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IOException e) {
             throw new DomainBadRequestException("error.skill.publish.package.invalid", e.getMessage());
         }
         var result = cliSkillAppService.publish(

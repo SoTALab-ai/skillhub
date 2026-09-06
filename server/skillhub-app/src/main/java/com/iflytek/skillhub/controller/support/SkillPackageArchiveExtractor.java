@@ -3,20 +3,30 @@ package com.iflytek.skillhub.controller.support;
 import com.iflytek.skillhub.config.SkillPublishProperties;
 import com.iflytek.skillhub.domain.skill.validation.PackageEntry;
 import com.iflytek.skillhub.domain.skill.validation.SkillPackagePolicy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
+import java.util.zip.ZipFile;
 
 @Component
 public class SkillPackageArchiveExtractor {
+
+    private static final Logger log = LoggerFactory.getLogger(SkillPackageArchiveExtractor.class);
 
     public record ExtractionResult(List<PackageEntry> entries, List<String> warnings) {}
 
@@ -38,49 +48,63 @@ public class SkillPackageArchiveExtractor {
             );
         }
 
-        List<PackageEntry> entries = new ArrayList<>();
-        long totalSize = 0;
+        Path temporaryArchive = Files.createTempFile("skillhub-upload-", ".zip");
+        try {
+            try (InputStream input = file.getInputStream()) {
+                Files.copy(input, temporaryArchive, StandardCopyOption.REPLACE_EXISTING);
+            }
 
-        try (ZipInputStream zis = new ZipInputStream(file.getInputStream())) {
-            ZipEntry zipEntry;
-            while ((zipEntry = zis.getNextEntry()) != null) {
-                if (isDirectoryEntry(zipEntry)) {
-                    zis.closeEntry();
-                    continue;
+            List<PackageEntry> entries = new ArrayList<>();
+            long totalSize = 0;
+
+            try (ZipFile zipFile = new ZipFile(temporaryArchive.toFile(), StandardCharsets.UTF_8)) {
+                Enumeration<? extends ZipEntry> zipEntries = zipFile.entries();
+                while (zipEntries.hasMoreElements()) {
+                    ZipEntry zipEntry = zipEntries.nextElement();
+                    if (isDirectoryEntry(zipEntry)) {
+                        continue;
+                    }
+
+                    if (isOsMetadataEntry(zipEntry.getName())) {
+                        continue;
+                    }
+
+                    if (entries.size() >= maxFileCount) {
+                        throw new IllegalArgumentException(
+                                "Too many files: more than " + maxFileCount
+                        );
+                    }
+
+                    String normalizedPath = SkillPackagePolicy.normalizeEntryPath(zipEntry.getName());
+                    byte[] content;
+                    try (InputStream entryInput = zipFile.getInputStream(zipEntry)) {
+                        content = readEntry(entryInput, normalizedPath);
+                    }
+                    totalSize += content.length;
+                    if (totalSize > maxTotalPackageSize) {
+                        throw new IllegalArgumentException(
+                                "Package too large: " + totalSize + " bytes (max: "
+                                        + maxTotalPackageSize + ")"
+                        );
+                    }
+
+                    entries.add(new PackageEntry(
+                            normalizedPath,
+                            content,
+                            content.length,
+                            determineContentType(normalizedPath)
+                    ));
                 }
+            }
 
-                if (isOsMetadataEntry(zipEntry.getName())) {
-                    zis.closeEntry();
-                    continue;
-                }
-
-                if (entries.size() >= maxFileCount) {
-                    throw new IllegalArgumentException(
-                            "Too many files: more than " + maxFileCount
-                    );
-                }
-
-                String normalizedPath = SkillPackagePolicy.normalizeEntryPath(zipEntry.getName());
-                byte[] content = readEntry(zis, normalizedPath);
-                totalSize += content.length;
-                if (totalSize > maxTotalPackageSize) {
-                    throw new IllegalArgumentException(
-                            "Package too large: " + totalSize + " bytes (max: "
-                                    + maxTotalPackageSize + ")"
-                    );
-                }
-
-                entries.add(new PackageEntry(
-                        normalizedPath,
-                        content,
-                        content.length,
-                        determineContentType(normalizedPath)
-                ));
-                zis.closeEntry();
+            return stripSingleRootDirectory(entries);
+        } finally {
+            try {
+                Files.deleteIfExists(temporaryArchive);
+            } catch (IOException cleanupError) {
+                log.warn("Failed to delete temporary upload archive: {}", temporaryArchive, cleanupError);
             }
         }
-
-        return stripSingleRootDirectory(entries);
     }
 
     public ExtractionResult extractWithWarnings(MultipartFile file) throws IOException {
@@ -176,15 +200,15 @@ public class SkillPackageArchiveExtractor {
         String normalized = name.replace('\\', '/');
         if (normalized.startsWith("__MACOSX/") || normalized.equals("__MACOSX")) return true;
         String fileName = normalized.contains("/") ? normalized.substring(normalized.lastIndexOf('/') + 1) : normalized;
-        return fileName.equals(".DS_Store") || fileName.startsWith("._");
+        return fileName.equals(".DS_Store") || fileName.equals(".gitkeep") || fileName.startsWith("._");
     }
 
-    private byte[] readEntry(ZipInputStream zis, String path) throws IOException {
+    private byte[] readEntry(InputStream input, String path) throws IOException {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         byte[] buffer = new byte[8192];
         long totalRead = 0;
         int read;
-        while ((read = zis.read(buffer)) != -1) {
+        while ((read = input.read(buffer)) != -1) {
             totalRead += read;
             if (totalRead > maxSingleFileSize) {
                 throw new IllegalArgumentException(

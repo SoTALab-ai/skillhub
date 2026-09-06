@@ -17,9 +17,13 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -56,8 +60,7 @@ class CliDryRunValidateTest {
                         true, List.of(), List.of(),
                         "my-skill", "1.0.0"));
 
-        MockMultipartFile file = new MockMultipartFile("file", "skill.zip",
-                "application/zip", new byte[]{0x50, 0x4B, 0x03, 0x04});
+        MockMultipartFile file = validSkillArchive();
 
         mockMvc.perform(multipart("/api/cli/v1/skills/global/publish/validate")
                         .file(file)
@@ -77,8 +80,7 @@ class CliDryRunValidateTest {
                         false, List.of("Missing required file: SKILL.md at root"), List.of(),
                         null, null));
 
-        MockMultipartFile file = new MockMultipartFile("file", "skill.zip",
-                "application/zip", new byte[]{0x50, 0x4B, 0x03, 0x04});
+        MockMultipartFile file = validSkillArchive();
 
         mockMvc.perform(multipart("/api/cli/v1/skills/global/publish/validate")
                         .file(file)
@@ -97,8 +99,7 @@ class CliDryRunValidateTest {
                 .willReturn(new CliDryRunResponse(
                         true, List.of(), List.of(), "my-skill", "1.0.0"));
 
-        MockMultipartFile file = new MockMultipartFile("file", "skill.zip",
-                "application/zip", new byte[]{0x50, 0x4B, 0x03, 0x04});
+        MockMultipartFile file = validSkillArchive();
 
         mockMvc.perform(multipart("/api/cli/v1/skills/global/publish/validate")
                         .file(file)
@@ -111,8 +112,7 @@ class CliDryRunValidateTest {
     @Test
     void validatePublish_rejectsInvalidVisibility() throws Exception {
         givenValidPublishToken();
-        MockMultipartFile file = new MockMultipartFile("file", "skill.zip",
-                "application/zip", new byte[]{0x50, 0x4B, 0x03, 0x04});
+        MockMultipartFile file = validSkillArchive();
 
         mockMvc.perform(multipart("/api/cli/v1/skills/global/publish/validate")
                         .file(file)
@@ -123,11 +123,21 @@ class CliDryRunValidateTest {
 
     @Test
     void validatePublish_requiresAuthentication() throws Exception {
-        MockMultipartFile file = new MockMultipartFile("file", "skill.zip",
-                "application/zip", new byte[]{0x50, 0x4B, 0x03, 0x04});
+        MockMultipartFile file = validSkillArchive();
 
         mockMvc.perform(multipart("/api/cli/v1/skills/global/publish/validate")
                         .file(file))
                 .andExpect(status().isUnauthorized());
+    }
+
+    private MockMultipartFile validSkillArchive() throws Exception {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(output, StandardCharsets.UTF_8)) {
+            zip.putNextEntry(new ZipEntry("SKILL.md"));
+            zip.write("---\nname: my-skill\ndescription: Test skill\n---\n"
+                    .getBytes(StandardCharsets.UTF_8));
+            zip.closeEntry();
+        }
+        return new MockMultipartFile("file", "skill.zip", "application/zip", output.toByteArray());
     }
 }

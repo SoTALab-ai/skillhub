@@ -220,6 +220,28 @@ class SkillPublishControllerTest {
             .andExpect(jsonPath("$.code").value(0));
     }
 
+    @Test
+    void publish_invalidZipReturnsBadRequest() throws Exception {
+        PlatformPrincipal principal = new PlatformPrincipal(
+            "usr_1", "publisher", "publisher@example.com", "", "local", Set.of("SUPER_ADMIN"));
+        var auth = new UsernamePasswordAuthenticationToken(
+            principal, null, List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN")));
+        MockMultipartFile file = new MockMultipartFile(
+            "file", "broken.zip", "application/zip", "not a zip".getBytes(StandardCharsets.UTF_8));
+
+        mockMvc.perform(multipart("/api/v1/skills/global/publish")
+                .file(file)
+                .param("visibility", "PUBLIC")
+                .with(authentication(auth))
+                .with(csrf()))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.code").value(400));
+
+        verify(skillPublishService, never()).publishFromEntries(
+            eq("global"), anyList(), eq("usr_1"),
+            eq(SkillVisibility.PUBLIC), eq(Set.of("SUPER_ADMIN")), eq(false));
+    }
+
     private byte[] buildZipBytes() throws Exception {
         try (ByteArrayOutputStream output = new ByteArrayOutputStream();
              ZipOutputStream zip = new ZipOutputStream(output, StandardCharsets.UTF_8)) {

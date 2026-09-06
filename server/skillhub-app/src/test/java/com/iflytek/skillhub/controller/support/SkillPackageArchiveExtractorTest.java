@@ -7,9 +7,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.CRC32;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -127,6 +129,21 @@ class SkillPackageArchiveExtractorTest {
 
         assertEquals(1, entries.size());
         assertEquals("SKILL.md", entries.get(0).path());
+    }
+
+    @Test
+    void supportsStoredEntryWithDataDescriptor() throws Exception {
+        byte[] content = "---\nname: stored-skill\n---\n".getBytes(StandardCharsets.UTF_8);
+        byte[] zipBytes = createStoredZipWithDataDescriptor("SKILL.md", content);
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "stored-data-descriptor.zip", "application/zip", zipBytes);
+
+        List<PackageEntry> entries = extractor.extract(file);
+
+        assertEquals(1, entries.size());
+        assertEquals("SKILL.md", entries.get(0).path());
+        assertEquals(new String(content, StandardCharsets.UTF_8),
+                new String(entries.get(0).content(), StandardCharsets.UTF_8));
     }
 
     @Test
@@ -257,6 +274,26 @@ class SkillPackageArchiveExtractorTest {
     }
 
     @Test
+    void filtersGitkeepWithoutFilteringOtherDotfiles() throws Exception {
+        byte[] zipBytes = createZip(Map.of(
+                ".gitkeep", new byte[0],
+                "my-skill/SKILL.md", "---\nname: test\n---\n".getBytes(),
+                "my-skill/.gitkeep", new byte[0],
+                "my-skill/assets/.gitkeep", new byte[0],
+                "my-skill/.editorconfig", "root = true".getBytes()
+        ));
+        MockMultipartFile file = new MockMultipartFile("file", "test.zip", "application/zip", zipBytes);
+
+        SkillPackageArchiveExtractor.ExtractionResult result = extractor.extractWithWarnings(file);
+
+        assertEquals(2, result.entries().size());
+        assertTrue(result.entries().stream().anyMatch(e -> e.path().equals("SKILL.md")));
+        assertTrue(result.entries().stream().anyMatch(e -> e.path().equals(".editorconfig")));
+        assertTrue(result.entries().stream().noneMatch(e -> e.path().contains(".gitkeep")));
+        assertTrue(result.warnings().isEmpty());
+    }
+
+    @Test
     void realWorldMacZipWithNestedSkillMd() throws Exception {
         // Simulates: ui-ux-pro-max/uiux/SKILL.md + __MACOSX + .DS_Store + stray csv
         byte[] zipBytes = createZip(Map.of(
@@ -343,5 +380,76 @@ class SkillPackageArchiveExtractorTest {
             }
         }
         return baos.toByteArray();
+    }
+
+    private byte[] createStoredZipWithDataDescriptor(String entryName, byte[] content) throws Exception {
+        byte[] name = entryName.getBytes(StandardCharsets.UTF_8);
+        CRC32 crc = new CRC32();
+        crc.update(content);
+
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        try (DataOutputStream output = new DataOutputStream(bytes)) {
+            writeLittleEndianInt(output, 0x04034b50);
+            writeLittleEndianShort(output, 20);
+            writeLittleEndianShort(output, 0x08);
+            writeLittleEndianShort(output, ZipEntry.STORED);
+            writeLittleEndianShort(output, 0);
+            writeLittleEndianShort(output, 0);
+            writeLittleEndianInt(output, 0);
+            writeLittleEndianInt(output, 0);
+            writeLittleEndianInt(output, 0);
+            writeLittleEndianShort(output, name.length);
+            writeLittleEndianShort(output, 0);
+            output.write(name);
+            output.write(content);
+
+            writeLittleEndianInt(output, 0x08074b50);
+            writeLittleEndianInt(output, crc.getValue());
+            writeLittleEndianInt(output, content.length);
+            writeLittleEndianInt(output, content.length);
+
+            int centralDirectoryOffset = bytes.size();
+            writeLittleEndianInt(output, 0x02014b50);
+            writeLittleEndianShort(output, 20);
+            writeLittleEndianShort(output, 20);
+            writeLittleEndianShort(output, 0x08);
+            writeLittleEndianShort(output, ZipEntry.STORED);
+            writeLittleEndianShort(output, 0);
+            writeLittleEndianShort(output, 0);
+            writeLittleEndianInt(output, crc.getValue());
+            writeLittleEndianInt(output, content.length);
+            writeLittleEndianInt(output, content.length);
+            writeLittleEndianShort(output, name.length);
+            writeLittleEndianShort(output, 0);
+            writeLittleEndianShort(output, 0);
+            writeLittleEndianShort(output, 0);
+            writeLittleEndianShort(output, 0);
+            writeLittleEndianInt(output, 0);
+            writeLittleEndianInt(output, 0);
+            output.write(name);
+            int centralDirectorySize = bytes.size() - centralDirectoryOffset;
+
+            writeLittleEndianInt(output, 0x06054b50);
+            writeLittleEndianShort(output, 0);
+            writeLittleEndianShort(output, 0);
+            writeLittleEndianShort(output, 1);
+            writeLittleEndianShort(output, 1);
+            writeLittleEndianInt(output, centralDirectorySize);
+            writeLittleEndianInt(output, centralDirectoryOffset);
+            writeLittleEndianShort(output, 0);
+        }
+        return bytes.toByteArray();
+    }
+
+    private void writeLittleEndianShort(DataOutputStream output, int value) throws Exception {
+        output.writeByte(value & 0xff);
+        output.writeByte((value >>> 8) & 0xff);
+    }
+
+    private void writeLittleEndianInt(DataOutputStream output, long value) throws Exception {
+        output.writeByte((int) (value & 0xff));
+        output.writeByte((int) ((value >>> 8) & 0xff));
+        output.writeByte((int) ((value >>> 16) & 0xff));
+        output.writeByte((int) ((value >>> 24) & 0xff));
     }
 }

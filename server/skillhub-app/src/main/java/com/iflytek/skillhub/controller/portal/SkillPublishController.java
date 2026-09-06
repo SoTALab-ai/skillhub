@@ -54,7 +54,7 @@ public class SkillPublishController extends BaseApiController {
             @RequestParam("file") MultipartFile file,
             @RequestParam("visibility") String visibility,
             @RequestParam(value = "confirmWarnings", defaultValue = "false") boolean confirmWarnings,
-            @AuthenticationPrincipal PlatformPrincipal principal) throws IOException {
+            @AuthenticationPrincipal PlatformPrincipal principal) {
 
         SkillVisibility skillVisibility = SkillVisibility.valueOf(visibility.toUpperCase());
 
@@ -65,7 +65,7 @@ public class SkillPublishController extends BaseApiController {
                     skillPackageArchiveExtractor.extractWithWarnings(file);
             entries = extractionResult.entries();
             extractionWarnings = extractionResult.warnings();
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException | IOException e) {
             throw new DomainBadRequestException("error.skill.publish.package.invalid", e.getMessage());
         }
 
